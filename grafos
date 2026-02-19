@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generador de Grafos</title>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+    }
+
+    #network {
+      width: 90%;
+      height: 500px;
+      border: 2px solid black;
+      margin: auto;
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Generador de Grafos - Análisis de Algoritmos</h2>
+
+<button onclick="agregarNodo()">Agregar Nodo</button>
+<button onclick="agregarArista()">Agregar Arista</button>
+<button onclick="agregarLoop()">Agregar Loop</button>
+
+<div id="network"></div>
+
+<script>
+
+let nodes = new vis.DataSet([]);
+let edges = new vis.DataSet([]);
+
+let container = document.getElementById("network");
+
+let data = {
+  nodes: nodes,
+  edges: edges
+};
+
+let options = {
+  edges: {
+    arrows: 'to',
+    font: { align: 'middle' }
+  }
+};
+
+let network = new vis.Network(container, data, options);
+
+let contador = 1;
+
+function agregarNodo()
+{
+  nodes.add({
+    id: contador,
+    label: "Nodo " + contador
+  });
+
+  contador++;
+}
+
+function agregarArista()
+{
+  if(nodes.length >= 2)
+  {
+    let from = Math.floor(Math.random()*nodes.length)+1;
+    let to = Math.floor(Math.random()*nodes.length)+1;
+
+    edges.add({
+      from: from,
+      to: to,
+      label: "peso " + Math.floor(Math.random()*10)
+    });
+  }
+}
+
+function agregarLoop()
+{
+  if(nodes.length >= 1)
+  {
+    let nodo = Math.floor(Math.random()*nodes.length)+1;
+
+    edges.add({
+      from: nodo,
+      to: nodo,
+      label: "loop"
+    });
+  }
+}
+
+</script>
+
+</body>
+</html>
