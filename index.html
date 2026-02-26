@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Generador de Grafos</title>
+  <title>Editor de Grafos</title>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
   <style>
@@ -15,10 +15,11 @@
       height: 500px;
       border: 2px solid black;
       margin: auto;
+      cursor: crosshair;
     }
 
     button {
-      margin: 8px;
+      margin: 6px;
       padding: 8px 15px;
       cursor: pointer;
     }
@@ -30,24 +31,27 @@
 
     th, td {
       border: 1px solid black;
-      padding: 8px;
+      padding: 6px;
       width: 40px;
       text-align: center;
+    }
+
+    .activo {
+      background-color: lightgreen;
     }
   </style>
 </head>
 <body>
 
-<h2>Generador de Grafos - Análisis de Algoritmos</h2>
+<h2>Editor de Grafos - Análisis de Algoritmos</h2>
 
-<button onclick="agregarNodo()">Agregar Nodo</button>
-<button onclick="agregarArista()">Agregar Arista</button>
-<button onclick="agregarLoop()">Agregar Loop</button>
-<button onclick="mostrarMatriz()">Mostrar Matriz de Adyacencia</button>
-<button onclick="limpiar()">Limpiar Lienzo</button>
+<button id="btnNodo" onclick="activarModo('nodo')">Modo Nodo</button>
+<button id="btnArista" onclick="activarModo('arista')">Modo Arista</button>
+<button id="btnLoop" onclick="activarModo('loop')">Modo Loop</button>
+<button onclick="mostrarMatriz()">Mostrar Matriz</button>
+<button onclick="limpiar()">Limpiar</button>
 
 <div id="network"></div>
-
 <div id="matriz"></div>
 
 <script>
@@ -57,95 +61,138 @@ let edges = new vis.DataSet([]);
 
 let container = document.getElementById("network");
 
-let data = {
-  nodes: nodes,
-  edges: edges
-};
+let data = { nodes: nodes, edges: edges };
 
 let options = {
+  interaction: { multiselect: false },
   edges: {
     arrows: 'to',
     font: { align: 'middle' }
-  }
+  },
+  physics: false
 };
 
 let network = new vis.Network(container, data, options);
 
+let modo = "";
 let contador = 1;
+let nodoSeleccionado = null;
 
-function agregarNodo() {
-  nodes.add({
-    id: contador,
-    label: "Nodo " + contador
-  });
-  contador++;
+function activarModo(tipo) {
+  modo = tipo;
+
+  document.getElementById("btnNodo").classList.remove("activo");
+  document.getElementById("btnArista").classList.remove("activo");
+  document.getElementById("btnLoop").classList.remove("activo");
+
+  if(tipo === "nodo") document.getElementById("btnNodo").classList.add("activo");
+  if(tipo === "arista") document.getElementById("btnArista").classList.add("activo");
+  if(tipo === "loop") document.getElementById("btnLoop").classList.add("activo");
+
+  nodoSeleccionado = null;
 }
 
-function agregarArista() {
-  if (nodes.length >= 2) {
-    let from = Math.floor(Math.random() * nodes.length) + 1;
-    let to = Math.floor(Math.random() * nodes.length) + 1;
+network.on("click", function (params) {
 
-    edges.add({
-      from: from,
-      to: to,
-      label: "1"
+  if(modo === "nodo") {
+    let position = params.pointer.canvas;
+
+    nodes.add({
+      id: contador,
+      label: "Nodo " + contador,
+      x: position.x,
+      y: position.y,
+      fixed: true
     });
+
+    contador++;
   }
-}
 
-function agregarLoop() {
-  if (nodes.length >= 1) {
-    let nodo = Math.floor(Math.random() * nodes.length) + 1;
+  if(modo === "arista") {
+    if(params.nodes.length > 0) {
 
-    edges.add({
-      from: nodo,
-      to: nodo,
-      label: "1"
-    });
+      if(nodoSeleccionado === null) {
+        nodoSeleccionado = params.nodes[0];
+      } else {
+        let peso = prompt("Ingrese el peso de la arista:", "1");
+        if(peso === null || peso === "") peso = 1;
+
+        edges.add({
+          from: nodoSeleccionado,
+          to: params.nodes[0],
+          label: peso
+        });
+
+        nodoSeleccionado = null;
+      }
+    }
   }
-}
 
-function limpiar() {
-  nodes.clear();
-  edges.clear();
-  contador = 1;
-  document.getElementById("matriz").innerHTML = "";
-}
+  if(modo === "loop") {
+    if(params.nodes.length > 0) {
+      let peso = prompt("Ingrese el peso del loop:", "1");
+      if(peso === null || peso === "") peso = 1;
+
+      edges.add({
+        from: params.nodes[0],
+        to: params.nodes[0],
+        label: peso
+      });
+    }
+  }
+
+});
 
 function mostrarMatriz() {
 
   let cantidad = nodes.length;
   let matriz = [];
 
-  // Crear matriz vacía
-  for (let i = 0; i < cantidad; i++) {
+  for(let i=0; i<cantidad; i++) {
     matriz[i] = [];
-    for (let j = 0; j < cantidad; j++) {
+    for(let j=0; j<cantidad; j++) {
       matriz[i][j] = 0;
     }
   }
 
-  // Llenar con aristas
   edges.forEach(function(edge) {
-    matriz[edge.from - 1][edge.to - 1] = 1;
+    matriz[edge.from-1][edge.to-1] = edge.label;
   });
 
-  // Crear tabla HTML
   let tabla = "<h3>Matriz de Adyacencia</h3>";
   tabla += "<table><tr><th></th>";
 
-  for (let i = 1; i <= cantidad; i++) {
-    tabla += "<th>" + i + "</th>";
+  for(let i=1; i<=cantidad; i++) {
+    tabla += "<th>"+i+"</th>";
   }
 
   tabla += "</tr>";
 
-  for (let i = 0; i < cantidad; i++) {
-    tabla += "<tr><th>" + (i+1) + "</th>";
-    for (let j = 0; j < cantidad; j++) {
-      tabla += "<td>" + matriz[i][j] + "</td>";
+  for(let i=0; i<cantidad; i++) {
+    tabla += "<tr><th>"+(i+1)+"</th>";
+    for(let j=0; j<cantidad; j++) {
+      tabla += "<td>"+matriz[i][j]+"</td>";
     }
+    tabla += "</tr>";
+  }
+
+  tabla += "</table>";
+
+  document.getElementById("matriz").innerHTML = tabla;
+}
+
+function limpiar() {
+  nodes.clear();
+  edges.clear();
+  contador = 1;
+  nodoSeleccionado = null;
+  document.getElementById("matriz").innerHTML = "";
+}
+
+</script>
+
+</body>
+</html>    }
     tabla += "</tr>";
   }
 
