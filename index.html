@@ -1,223 +1,271 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Editor Profesional de Grafos</title>
-  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<meta charset="UTF-8">
+<title>Grafos Avanzado</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #1e3c72, #2a5298);
-      color: white;
-      text-align: center;
-    }
-
-    h2 {
-      margin-top: 20px;
-    }
-
-    .panel {
-      margin: 15px;
-    }
-
-    button {
-      padding: 10px 18px;
-      margin: 5px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      background-color: #ffffff;
-      color: #2a5298;
-      transition: 0.3s;
-    }
-
-    button:hover {
-      background-color: #ffd700;
-      color: black;
-    }
-
-    .activo {
-      background-color: #00ff99 !important;
-      color: black !important;
-    }
-
-    #network {
-      width: 95%;
-      height: 500px;
-      margin: auto;
-      background: white;
-      border-radius: 12px;
-    }
-
-    #matriz {
-      margin-top: 20px;
-      color: black;
-    }
-
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      background: white;
-    }
-
-    th, td {
-      border: 1px solid black;
-      padding: 8px;
-      width: 40px;
-      text-align: center;
-    }
-
-  </style>
+<style>
+body{
+    font-family: Arial;
+    text-align:center;
+    background: linear-gradient(135deg,#1e3c72,#2a5298);
+    color:white;
+}
+canvas{
+    background:white;
+    border-radius:10px;
+    margin-top:10px;
+}
+button{
+    margin:5px;
+    padding:8px 12px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:bold;
+}
+.controls{
+    margin-top:10px;
+}
+table{
+    margin:auto;
+    background:white;
+    color:black;
+    border-collapse:collapse;
+}
+td,th{
+    border:1px solid black;
+    padding:5px;
+}
+</style>
 </head>
 <body>
 
-<h2>Editor Interactivo de Grafos</h2>
+<h2>Editor de Grafos</h2>
 
-<div class="panel">
-  <button id="btnNodo" onclick="activarModo('nodo')">Modo Nodo</button>
-  <button id="btnArista" onclick="activarModo('arista')">Modo Arista</button>
-  <button id="btnLoop" onclick="activarModo('loop')">Modo Loop</button>
-  <button onclick="mostrarMatriz()">Mostrar Matriz</button>
-  <button onclick="limpiar()">Limpiar</button>
+<div class="controls">
+<button onclick="setMode('node')">Agregar Nodo</button>
+<button onclick="setMode('edge')">Agregar Arista</button>
+<button onclick="setMode('loop')">Agregar Loop</button>
+<button onclick="clearCanvas()">Limpiar</button>
+<button onclick="saveGraph()">Grabar</button>
+<button onclick="restoreGraph()">Restaurar</button>
+<button onclick="exportJSON()">Exportar</button>
+<input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
+<button onclick="document.getElementById('importFile').click()">Importar</button>
 </div>
 
-<div id="network"></div>
-<div id="matriz"></div>
+<canvas id="canvas" width="800" height="500"></canvas>
+
+<h3>Matriz de Adyacencia</h3>
+<div id="matrix"></div>
 
 <script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-let nodes = new vis.DataSet([]);
-let edges = new vis.DataSet([]);
+let nodes = [];
+let edges = [];
+let mode = null;
+let selectedNode = null;
+let nodeId = 0;
 
-let container = document.getElementById("network");
-
-let data = { nodes: nodes, edges: edges };
-
-let options = {
-  physics: false,
-  edges: {
-    arrows: { to: true },
-    font: { align: "middle" }
-  }
-};
-
-let network = new vis.Network(container, data, options);
-
-let modo = "";
-let contador = 1;
-let nodoOrigen = null;
-
-function activarModo(tipo) {
-  modo = tipo;
-  nodoOrigen = null;
-
-  document.querySelectorAll("button").forEach(b => b.classList.remove("activo"));
-
-  if(tipo === "nodo") document.getElementById("btnNodo").classList.add("activo");
-  if(tipo === "arista") document.getElementById("btnArista").classList.add("activo");
-  if(tipo === "loop") document.getElementById("btnLoop").classList.add("activo");
+function setMode(m){
+    mode = m;
+    selectedNode = null;
 }
 
-network.on("click", function(params) {
+canvas.addEventListener("click", function(e){
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-  // CREAR NODO DONDE HACES CLIC
-  if(modo === "nodo" && params.nodes.length === 0) {
-    let position = params.pointer.canvas;
-
-    nodes.add({
-      id: contador,
-      label: "Nodo " + contador,
-      x: position.x,
-      y: position.y,
-      fixed: true
-    });
-
-    contador++;
-  }
-
-  // CREAR ARISTA MANUAL
-  if(modo === "arista" && params.nodes.length > 0) {
-
-    if(nodoOrigen === null) {
-      nodoOrigen = params.nodes[0];
-    } else {
-      let peso = prompt("Ingrese peso:", Math.floor(Math.random()*9)+1);
-      if(peso === null || peso === "") return;
-
-      edges.add({
-        from: nodoOrigen,
-        to: params.nodes[0],
-        label: peso
-      });
-
-      nodoOrigen = null;
+    if(mode==="node"){
+        let name = prompt("Nombre del nodo:");
+        if(!name) return;
+        nodeId++;
+        nodes.push({id:nodeId,x,y,name});
+        draw();
+        generateMatrix();
     }
-  }
 
-  // CREAR LOOP MANUAL
-  if(modo === "loop" && params.nodes.length > 0) {
+    else if(mode==="edge"){
+        let node = getNode(x,y);
+        if(!node) return;
 
-    let peso = prompt("Ingrese peso del loop:", Math.floor(Math.random()*9)+1);
-    if(peso === null || peso === "") return;
+        if(!selectedNode){
+            selectedNode = node;
+        } else {
+            let weight = parseInt(prompt("Peso de la arista:"));
+            if(isNaN(weight)) weight = 1;
+            edges.push({from:selectedNode.id,to:node.id,weight});
+            selectedNode=null;
+            draw();
+            generateMatrix();
+        }
+    }
 
-    edges.add({
-      from: params.nodes[0],
-      to: params.nodes[0],
-      label: peso
-    });
-  }
-
+    else if(mode==="loop"){
+        let node = getNode(x,y);
+        if(!node) return;
+        let weight = parseInt(prompt("Peso del loop:"));
+        if(isNaN(weight)) weight = 1;
+        edges.push({from:node.id,to:node.id,weight});
+        draw();
+        generateMatrix();
+    }
 });
 
-function mostrarMatriz() {
-
-  let cantidad = nodes.length;
-  let matriz = [];
-
-  for(let i=0; i<cantidad; i++) {
-    matriz[i] = [];
-    for(let j=0; j<cantidad; j++) {
-      matriz[i][j] = 0;
-    }
-  }
-
-  edges.forEach(function(edge) {
-    matriz[edge.from-1][edge.to-1] = edge.label;
-  });
-
-  let tabla = "<h3>Matriz de Adyacencia</h3>";
-  tabla += "<table><tr><th></th>";
-
-  for(let i=1; i<=cantidad; i++) {
-    tabla += "<th>"+i+"</th>";
-  }
-
-  tabla += "</tr>";
-
-  for(let i=0; i<cantidad; i++) {
-    tabla += "<tr><th>"+(i+1)+"</th>";
-    for(let j=0; j<cantidad; j++) {
-      tabla += "<td>"+matriz[i][j]+"</td>";
-    }
-    tabla += "</tr>";
-  }
-
-  tabla += "</table>";
-
-  document.getElementById("matriz").innerHTML = tabla;
+function getNode(x,y){
+    return nodes.find(n=>Math.sqrt((n.x-x)**2+(n.y-y)**2)<20);
 }
 
-function limpiar() {
-  nodes.clear();
-  edges.clear();
-  contador = 1;
-  nodoOrigen = null;
-  document.getElementById("matriz").innerHTML = "";
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    edges.forEach(edge=>{
+        let from = nodes.find(n=>n.id===edge.from);
+        let to = nodes.find(n=>n.id===edge.to);
+
+        ctx.beginPath();
+
+        if(edge.from===edge.to){
+            ctx.arc(from.x,from.y-30,20,0,2*Math.PI);
+        } else {
+            let reverse = edges.find(e=>e.from===edge.to && e.to===edge.from);
+            if(reverse){
+                ctx.quadraticCurveTo(
+                    (from.x+to.x)/2,
+                    (from.y+to.y)/2 - 40,
+                    to.x,to.y
+                );
+                ctx.moveTo(from.x,from.y);
+            } else {
+                ctx.moveTo(from.x,from.y);
+                ctx.lineTo(to.x,to.y);
+            }
+        }
+
+        ctx.stroke();
+
+        ctx.fillStyle="black";
+        ctx.fillText(edge.weight,(from.x+to.x)/2,(from.y+to.y)/2);
+    });
+
+    nodes.forEach(node=>{
+        ctx.beginPath();
+        ctx.arc(node.x,node.y,20,0,2*Math.PI);
+        ctx.fillStyle="#3498db";
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle="white";
+        ctx.fillText(node.name,node.x-10,node.y+5);
+    });
 }
 
+function generateMatrix(){
+    let n = nodes.length;
+    let matrix = Array.from({length:n},()=>Array(n).fill(0));
+
+    edges.forEach(edge=>{
+        let i = nodes.findIndex(n=>n.id===edge.from);
+        let j = nodes.findIndex(n=>n.id===edge.to);
+        matrix[i][j]+=edge.weight;
+    });
+
+    let html="<table><tr><th></th>";
+
+    nodes.forEach(node=>{
+        html+="<th>"+node.name+"</th>";
+    });
+
+    html+="<th>Conteo</th><th>Suma</th></tr>";
+
+    matrix.forEach((row,i)=>{
+        let count=0;
+        let sum=0;
+        html+="<tr><th>"+nodes[i].name+"</th>";
+        row.forEach(val=>{
+            if(val!==0) count++;
+            sum+=val;
+            html+="<td>"+val+"</td>";
+        });
+        html+="<td>"+count+"</td><td>"+sum+"</td></tr>";
+    });
+
+    html+="<tr><th>Conteo Col</th>";
+    for(let j=0;j<n;j++){
+        let count=0;
+        matrix.forEach(row=>{
+            if(row[j]!==0) count++;
+        });
+        html+="<td>"+count+"</td>";
+    }
+    html+="<td></td><td></td></tr>";
+
+    html+="<tr><th>Suma Col</th>";
+    for(let j=0;j<n;j++){
+        let sum=0;
+        matrix.forEach(row=>{
+            sum+=row[j];
+        });
+        html+="<td>"+sum+"</td>";
+    }
+    html+="<td></td><td></td></tr>";
+
+    html+="</table>";
+    document.getElementById("matrix").innerHTML=html;
+}
+
+function clearCanvas(){
+    nodes=[];
+    edges=[];
+    nodeId=0;
+    draw();
+    generateMatrix();
+}
+
+function saveGraph(){
+    localStorage.setItem("grafoGuardado",JSON.stringify({nodes,edges,nodeId}));
+    alert("Grafo grabado correctamente");
+}
+
+function restoreGraph(){
+    let data = localStorage.getItem("grafoGuardado");
+    if(!data) return alert("No hay datos guardados");
+    let obj = JSON.parse(data);
+    nodes=obj.nodes;
+    edges=obj.edges;
+    nodeId=obj.nodeId;
+    draw();
+    generateMatrix();
+}
+
+function exportJSON(){
+    let data = JSON.stringify({nodes,edges});
+    let blob = new Blob([data],{type:"application/json"});
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download="grafo.json";
+    a.click();
+}
+
+function importJSON(event){
+    let file = event.target.files[0];
+    if(!file) return;
+    let reader = new FileReader();
+    reader.onload=function(e){
+        let obj = JSON.parse(e.target.result);
+        nodes=obj.nodes;
+        edges=obj.edges;
+        nodeId=nodes.length;
+        draw();
+        generateMatrix();
+    }
+    reader.readAsText(file);
+}
+
+generateMatrix();
 </script>
-
 </body>
 </html>
