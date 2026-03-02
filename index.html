@@ -59,6 +59,7 @@ td,th{
 
 <h3>Matriz de Adyacencia</h3>
 <div id="matrix"></div>
+
 <script>
 
 const canvas = document.getElementById("canvas");
@@ -97,12 +98,12 @@ canvas.addEventListener("click", function(e){
             selectedNode = node;
         } else {
 
-            let input = prompt("Peso de la arista (solo números):");
+            let input = prompt("Peso (solo números):");
             let weight = Number(input);
 
             if(isNaN(weight) || input.trim()===""){
-                alert("Solo se permiten números.");
-                selectedNode = null;
+                alert("Solo números válidos.");
+                selectedNode=null;
                 return;
             }
 
@@ -117,11 +118,11 @@ canvas.addEventListener("click", function(e){
         let node = getNode(x,y);
         if(!node) return;
 
-        let input = prompt("Peso del loop (solo números):");
+        let input = prompt("Peso del loop:");
         let weight = Number(input);
 
         if(isNaN(weight) || input.trim()===""){
-            alert("Solo se permiten números.");
+            alert("Solo números válidos.");
             return;
         }
 
@@ -137,7 +138,7 @@ function getNode(x,y){
 
 function drawArrow(fromX, fromY, toX, toY){
     const angle = Math.atan2(toY-fromY, toX-fromX);
-    const headLength = 10;
+    const headLength = 12;
 
     ctx.beginPath();
     ctx.moveTo(toX, toY);
@@ -172,26 +173,12 @@ function draw(){
 
             let reverse = edges.find(e=>e.from===edge.to && e.to===edge.from);
 
-            if(reverse && edge.from < edge.to){
-                let midX = (from.x + to.x)/2;
-                let midY = (from.y + to.y)/2;
+            let midX = (from.x + to.x)/2;
+            let midY = (from.y + to.y)/2;
 
-                let offset = 40;
+            if(reverse){
 
-                ctx.moveTo(from.x,from.y);
-                ctx.quadraticCurveTo(midX,midY-offset,to.x,to.y);
-                ctx.stroke();
-
-                drawArrow(midX,midY-offset,to.x,to.y);
-                ctx.fillText(edge.weight,midX,midY-offset);
-
-            } 
-            else if(reverse && edge.from > edge.to){
-
-                let midX = (from.x + to.x)/2;
-                let midY = (from.y + to.y)/2;
-
-                let offset = -40;
+                let offset = (edge.from < edge.to) ? 40 : -40;
 
                 ctx.moveTo(from.x,from.y);
                 ctx.quadraticCurveTo(midX,midY-offset,to.x,to.y);
@@ -200,15 +187,14 @@ function draw(){
                 drawArrow(midX,midY-offset,to.x,to.y);
                 ctx.fillText(edge.weight,midX,midY-offset);
 
-            }
-            else{
+            } else {
+
                 ctx.moveTo(from.x,from.y);
                 ctx.lineTo(to.x,to.y);
                 ctx.stroke();
 
                 drawArrow(from.x,from.y,to.x,to.y);
-
-                ctx.fillText(edge.weight,(from.x+to.x)/2,(from.y+to.y)/2);
+                ctx.fillText(edge.weight,midX,midY);
             }
         }
     });
@@ -224,6 +210,111 @@ function draw(){
     });
 }
 
+function generateMatrix(){
+    let n = nodes.length;
+    let matrix = Array.from({length:n},()=>Array(n).fill(0));
+
+    edges.forEach(edge=>{
+        let i = nodes.findIndex(n=>n.id===edge.from);
+        let j = nodes.findIndex(n=>n.id===edge.to);
+        matrix[i][j]+=edge.weight;
+    });
+
+    let html="<table><tr><th></th>";
+
+    nodes.forEach(node=>{
+        html+="<th>"+node.name+"</th>";
+    });
+
+    html+="<th>Conteo</th><th>Suma</th></tr>";
+
+    matrix.forEach((row,i)=>{
+        let count=0;
+        let sum=0;
+        html+="<tr><th>"+nodes[i].name+"</th>";
+        row.forEach(val=>{
+            if(val!==0) count++;
+            sum+=val;
+            html+="<td>"+val+"</td>";
+        });
+        html+="<td>"+count+"</td><td>"+sum+"</td></tr>";
+    });
+
+    html+="<tr><th>Conteo Col</th>";
+    for(let j=0;j<n;j++){
+        let count=0;
+        matrix.forEach(row=>{
+            if(row[j]!==0) count++;
+        });
+        html+="<td>"+count+"</td>";
+    }
+    html+="<td></td><td></td></tr>";
+
+    html+="<tr><th>Suma Col</th>";
+    for(let j=0;j<n;j++){
+        let sum=0;
+        matrix.forEach(row=>{
+            sum+=row[j];
+        });
+        html+="<td>"+sum+"</td>";
+    }
+    html+="<td></td><td></td></tr>";
+
+    html+="</table>";
+    document.getElementById("matrix").innerHTML=html;
+}
+
+function clearCanvas(){
+    nodes=[];
+    edges=[];
+    nodeId=0;
+    draw();
+    generateMatrix();
+}
+
+function saveGraph(){
+    localStorage.setItem("grafoGuardado",JSON.stringify({nodes,edges,nodeId}));
+    alert("Grafo grabado");
+}
+
+function restoreGraph(){
+    let data = localStorage.getItem("grafoGuardado");
+    if(!data) return alert("No hay datos guardados");
+    let obj = JSON.parse(data);
+    nodes=obj.nodes;
+    edges=obj.edges;
+    nodeId=obj.nodeId;
+    draw();
+    generateMatrix();
+}
+
+function exportJSON(){
+    let data = JSON.stringify({nodes,edges});
+    let blob = new Blob([data],{type:"application/json"});
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download="grafo.json";
+    a.click();
+}
+
+function importJSON(event){
+    let file = event.target.files[0];
+    if(!file) return;
+    let reader = new FileReader();
+    reader.onload=function(e){
+        let obj = JSON.parse(e.target.result);
+        nodes=obj.nodes;
+        edges=obj.edges;
+        nodeId=nodes.length;
+        draw();
+        generateMatrix();
+    }
+    reader.readAsText(file);
+}
+
+generateMatrix();
+
 </script>
+    
 </body>
 </html>
