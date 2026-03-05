@@ -197,26 +197,33 @@ function getNode(x,y){
     );
 }
 
-function drawArrow(fromX,fromY,toX,toY){
+function drawArrow(fromX, fromY, toX, toY){
 
-    const angle = Math.atan2(toY-fromY,toX-fromX);
-    const headLength = 12;
+    const headLength = 14;
+
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const angle = Math.atan2(dy, dx);
+
+    const nodeRadius = 20;
+
+    // reducir la linea para que la flecha no quede dentro del nodo
+    const endX = toX - Math.cos(angle) * nodeRadius;
+    const endY = toY - Math.sin(angle) * nodeRadius;
 
     ctx.beginPath();
-
-    ctx.moveTo(toX,toY);
-
-    ctx.lineTo(
-        toX - headLength * Math.cos(angle - Math.PI/6),
-        toY - headLength * Math.sin(angle - Math.PI/6)
+    ctx.moveTo(
+        endX - headLength * Math.cos(angle - Math.PI/6),
+        endY - headLength * Math.sin(angle - Math.PI/6)
     );
 
+    ctx.lineTo(endX, endY);
+
     ctx.lineTo(
-        toX - headLength * Math.cos(angle + Math.PI/6),
-        toY - headLength * Math.sin(angle + Math.PI/6)
+        endX - headLength * Math.cos(angle + Math.PI/6),
+        endY - headLength * Math.sin(angle + Math.PI/6)
     );
 
-    ctx.closePath();
     ctx.fill();
 }
 
