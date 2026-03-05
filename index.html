@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Grafos Avanzado</title>
+<title>Editor de Grafos</title>
 
 <style>
 body{
@@ -11,11 +11,13 @@ body{
     background: linear-gradient(135deg,#1e3c72,#2a5298);
     color:white;
 }
+
 canvas{
     background:white;
     border-radius:10px;
     margin-top:10px;
 }
+
 button{
     margin:5px;
     padding:8px 12px;
@@ -24,21 +26,25 @@ button{
     cursor:pointer;
     font-weight:bold;
 }
+
 .controls{
     margin-top:10px;
 }
+
 table{
     margin:auto;
     background:white;
     color:black;
     border-collapse:collapse;
 }
+
 td,th{
     border:1px solid black;
     padding:5px;
 }
 </style>
 </head>
+
 <body>
 
 <h2>Editor de Grafos</h2>
@@ -51,6 +57,7 @@ td,th{
 <button onclick="saveGraph()">Grabar</button>
 <button onclick="restoreGraph()">Restaurar</button>
 <button onclick="exportJSON()">Exportar</button>
+
 <input type="file" id="importFile" style="display:none" onchange="importJSON(event)">
 <button onclick="document.getElementById('importFile').click()">Importar</button>
 </div>
@@ -77,87 +84,148 @@ function setMode(m){
 }
 
 canvas.addEventListener("click", function(e){
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     if(mode==="node"){
+
         let name = prompt("Nombre del nodo:");
         if(!name) return;
+
         nodeId++;
-        nodes.push({id:nodeId,x,y,name});
+
+        nodes.push({
+            id:nodeId,
+            x:x,
+            y:y,
+            name:name
+        });
+
         draw();
         generateMatrix();
     }
 
     else if(mode==="edge"){
+
         let node = getNode(x,y);
         if(!node) return;
 
         if(!selectedNode){
+
             selectedNode = node;
-        } else {
 
-            let input = prompt("Peso (solo números):");
-            let weight = Number(input);
+        }else{
 
-            if(isNaN(weight) || input.trim()===""){
-                alert("Solo números válidos.");
+            if(selectedNode.id === node.id){
+                alert("Use la opción LOOP para auto aristas");
                 selectedNode=null;
                 return;
             }
 
-            edges.push({from:selectedNode.id,to:node.id,weight});
+            let exists = edges.find(e =>
+                e.from===selectedNode.id && e.to===node.id
+            );
+
+            if(exists){
+                alert("Ya existe una arista en esa dirección");
+                selectedNode=null;
+                return;
+            }
+
+            let input = prompt("Peso (solo números)");
+            let weight = Number(input);
+
+            if(isNaN(weight) || input.trim()===""){
+                alert("Solo números válidos");
+                selectedNode=null;
+                return;
+            }
+
+            edges.push({
+                from:selectedNode.id,
+                to:node.id,
+                weight:weight
+            });
+
             selectedNode=null;
+
             draw();
             generateMatrix();
         }
     }
 
     else if(mode==="loop"){
+
         let node = getNode(x,y);
         if(!node) return;
 
-        let input = prompt("Peso del loop:");
+        let input = prompt("Peso del loop");
         let weight = Number(input);
 
         if(isNaN(weight) || input.trim()===""){
-            alert("Solo números válidos.");
+            alert("Solo números válidos");
             return;
         }
 
-        edges.push({from:node.id,to:node.id,weight});
+        let loopExists = edges.find(e =>
+            e.from===node.id && e.to===node.id
+        );
+
+        if(loopExists){
+            alert("Ese nodo ya tiene un loop");
+            return;
+        }
+
+        edges.push({
+            from:node.id,
+            to:node.id,
+            weight:weight
+        });
+
         draw();
         generateMatrix();
     }
+
 });
 
 function getNode(x,y){
-    return nodes.find(n=>Math.sqrt((n.x-x)**2+(n.y-y)**2)<20);
+
+    return nodes.find(n =>
+        Math.sqrt((n.x-x)**2 + (n.y-y)**2) < 20
+    );
 }
 
-function drawArrow(fromX, fromY, toX, toY){
-    const angle = Math.atan2(toY-fromY, toX-fromX);
+function drawArrow(fromX,fromY,toX,toY){
+
+    const angle = Math.atan2(toY-fromY,toX-fromX);
     const headLength = 12;
 
     ctx.beginPath();
-    ctx.moveTo(toX, toY);
+
+    ctx.moveTo(toX,toY);
+
     ctx.lineTo(
         toX - headLength * Math.cos(angle - Math.PI/6),
         toY - headLength * Math.sin(angle - Math.PI/6)
     );
+
     ctx.lineTo(
         toX - headLength * Math.cos(angle + Math.PI/6),
         toY - headLength * Math.sin(angle + Math.PI/6)
     );
+
     ctx.closePath();
     ctx.fill();
 }
 
 function draw(){
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     edges.forEach(edge=>{
+
         let from = nodes.find(n=>n.id===edge.from);
         let to = nodes.find(n=>n.id===edge.to);
 
@@ -166,12 +234,16 @@ function draw(){
         ctx.fillStyle="black";
 
         if(edge.from===edge.to){
+
             ctx.arc(from.x,from.y-35,20,0,2*Math.PI);
             ctx.stroke();
             ctx.fillText(edge.weight,from.x,from.y-55);
-        } else {
 
-            let reverse = edges.find(e=>e.from===edge.to && e.to===edge.from);
+        }else{
+
+            let reverse = edges.find(e =>
+                e.from===edge.to && e.to===edge.from
+            );
 
             let midX = (from.x + to.x)/2;
             let midY = (from.y + to.y)/2;
@@ -187,7 +259,7 @@ function draw(){
                 drawArrow(midX,midY-offset,to.x,to.y);
                 ctx.fillText(edge.weight,midX,midY-offset);
 
-            } else {
+            }else{
 
                 ctx.moveTo(from.x,from.y);
                 ctx.lineTo(to.x,to.y);
@@ -197,27 +269,40 @@ function draw(){
                 ctx.fillText(edge.weight,midX,midY);
             }
         }
+
     });
 
     nodes.forEach(node=>{
+
         ctx.beginPath();
+
         ctx.arc(node.x,node.y,20,0,2*Math.PI);
+
         ctx.fillStyle="#3498db";
         ctx.fill();
+
         ctx.stroke();
+
         ctx.fillStyle="white";
         ctx.fillText(node.name,node.x-10,node.y+5);
+
     });
+
 }
 
 function generateMatrix(){
+
     let n = nodes.length;
+
     let matrix = Array.from({length:n},()=>Array(n).fill(0));
 
     edges.forEach(edge=>{
+
         let i = nodes.findIndex(n=>n.id===edge.from);
         let j = nodes.findIndex(n=>n.id===edge.to);
-        matrix[i][j]+=edge.weight;
+
+        matrix[i][j] += edge.weight;
+
     });
 
     let html="<table><tr><th></th>";
@@ -229,92 +314,146 @@ function generateMatrix(){
     html+="<th>Conteo</th><th>Suma</th></tr>";
 
     matrix.forEach((row,i)=>{
+
         let count=0;
         let sum=0;
+
         html+="<tr><th>"+nodes[i].name+"</th>";
+
         row.forEach(val=>{
+
             if(val!==0) count++;
-            sum+=val;
+
+            sum += val;
+
             html+="<td>"+val+"</td>";
+
         });
+
         html+="<td>"+count+"</td><td>"+sum+"</td></tr>";
+
     });
 
     html+="<tr><th>Conteo Col</th>";
+
     for(let j=0;j<n;j++){
+
         let count=0;
+
         matrix.forEach(row=>{
             if(row[j]!==0) count++;
         });
+
         html+="<td>"+count+"</td>";
+
     }
+
     html+="<td></td><td></td></tr>";
 
     html+="<tr><th>Suma Col</th>";
+
     for(let j=0;j<n;j++){
+
         let sum=0;
+
         matrix.forEach(row=>{
             sum+=row[j];
         });
+
         html+="<td>"+sum+"</td>";
+
     }
+
     html+="<td></td><td></td></tr>";
 
     html+="</table>";
-    document.getElementById("matrix").innerHTML=html;
+
+    document.getElementById("matrix").innerHTML = html;
+
 }
 
 function clearCanvas(){
+
     nodes=[];
     edges=[];
     nodeId=0;
+
     draw();
     generateMatrix();
+
 }
 
 function saveGraph(){
-    localStorage.setItem("grafoGuardado",JSON.stringify({nodes,edges,nodeId}));
+
+    localStorage.setItem(
+        "grafoGuardado",
+        JSON.stringify({nodes,edges,nodeId})
+    );
+
     alert("Grafo grabado");
+
 }
 
 function restoreGraph(){
+
     let data = localStorage.getItem("grafoGuardado");
-    if(!data) return alert("No hay datos guardados");
+
+    if(!data){
+        alert("No hay datos guardados");
+        return;
+    }
+
     let obj = JSON.parse(data);
-    nodes=obj.nodes;
-    edges=obj.edges;
-    nodeId=obj.nodeId;
+
+    nodes = obj.nodes;
+    edges = obj.edges;
+    nodeId = obj.nodeId;
+
     draw();
     generateMatrix();
+
 }
 
 function exportJSON(){
+
     let data = JSON.stringify({nodes,edges});
+
     let blob = new Blob([data],{type:"application/json"});
+
     let a = document.createElement("a");
+
     a.href = URL.createObjectURL(blob);
     a.download="grafo.json";
+
     a.click();
+
 }
 
 function importJSON(event){
+
     let file = event.target.files[0];
     if(!file) return;
+
     let reader = new FileReader();
-    reader.onload=function(e){
+
+    reader.onload = function(e){
+
         let obj = JSON.parse(e.target.result);
-        nodes=obj.nodes;
-        edges=obj.edges;
-        nodeId=nodes.length;
+
+        nodes = obj.nodes;
+        edges = obj.edges;
+        nodeId = nodes.length;
+
         draw();
         generateMatrix();
     }
+
     reader.readAsText(file);
 }
 
 generateMatrix();
 
 </script>
-    
+
 </body>
 </html>
