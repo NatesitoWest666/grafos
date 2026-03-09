@@ -9,7 +9,7 @@ body{
     font-family: Arial;
     text-align:center;
     background: linear-gradient(135deg,#1e3c72,#2a5298);
-    color:white;
+    color:white;                                                        }6                    
 }
 
 canvas{
@@ -392,21 +392,33 @@ function clearCanvas(){
 
 function saveGraph(){
 
+    let nombre = prompt("Ingrese el nombre del grafo:");
+
+    if(!nombre){
+        alert("Debe escribir un nombre");
+        return;
+    }
+
     localStorage.setItem(
-        "grafoGuardado",
+        nombre,
         JSON.stringify({nodes,edges,nodeId})
     );
 
-    alert("Grafo grabado");
+    alert("Grafo guardado como: " + nombre);
 
 }
 
+
 function restoreGraph(){
 
-    let data = localStorage.getItem("grafoGuardado");
+    let nombre = prompt("Ingrese el nombre del grafo a restaurar:");
+
+    if(!nombre) return;
+
+    let data = localStorage.getItem(nombre);
 
     if(!data){
-        alert("No hay datos guardados");
+        alert("No existe un grafo con ese nombre");
         return;
     }
 
